@@ -5,57 +5,46 @@
 //  Created by Isaac Khor on 2026.05.15.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Query(sort: \PKSettings.createdAt, order: .forward) private var settingsRecords: [PKSettings]
+
+    private var settings: PKSettings? {
+        settingsRecords.first
+    }
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
+        TabView {
+            ConcentrationView(settings: settings)
+                .tabItem {
+                    Label("Levels", systemImage: "chart.xyaxis.line")
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
+
+            InjectionLogView()
+                .tabItem {
+                    Label("Log", systemImage: "syringe")
                 }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+
+            SettingsView(settings: settings)
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape")
                 }
-            }
-        } detail: {
-            Text("Select an item")
+        }
+        .task {
+            ensureSettingsRecord()
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
+    private func ensureSettingsRecord() {
+        guard settingsRecords.isEmpty else { return }
+        modelContext.insert(PKSettings())
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(PeptidePKApp.previewModelContainer)
 }
