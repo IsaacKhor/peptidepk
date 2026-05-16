@@ -44,6 +44,7 @@ struct InjectionLogView: View {
                 }
             }
             .navigationTitle("Injection Log")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     EditButton()

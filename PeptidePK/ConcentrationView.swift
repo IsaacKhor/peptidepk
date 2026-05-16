@@ -34,24 +34,44 @@ struct ConcentrationView: View {
                 }
             }
             .navigationTitle("Levels")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
     private func levelsContent(settings: PKSettings, now: Date) -> some View {
         let samples = Pharmacokinetics.samples(from: injections, settings: settings, now: now)
         let currentLevels = Pharmacokinetics.currentLevels(from: injections, settings: settings, now: now)
+        let bridgeSamples = currentLevels.map {
+            PKSample(date: now, drug: $0.drug, value: $0.value)
+        }
+        let pastSamples = (samples.filter { $0.date <= now } + bridgeSamples)
+            .sorted { $0.date < $1.date }
+        let futureSamples = (bridgeSamples + samples.filter { $0.date > now })
+            .sorted { $0.date < $1.date }
 
         return ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 Chart {
-                    ForEach(samples) { sample in
+                    ForEach(pastSamples) { sample in
                         LineMark(
                             x: .value("Time", sample.date),
-                            y: .value(settings.displayMode.axisTitle, sample.value)
+                            y: .value(settings.displayMode.axisTitle, sample.value),
+                            series: .value("Series", "\(sample.drug.rawValue)-past")
                         )
                         .foregroundStyle(by: .value("Drug", sample.drug.displayName))
                         .interpolationMethod(.catmullRom)
                         .lineStyle(.init(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                    }
+
+                    ForEach(futureSamples) { sample in
+                        LineMark(
+                            x: .value("Time", sample.date),
+                            y: .value(settings.displayMode.axisTitle, sample.value),
+                            series: .value("Series", "\(sample.drug.rawValue)-future")
+                        )
+                        .foregroundStyle(by: .value("Drug", sample.drug.displayName))
+                        .interpolationMethod(.catmullRom)
+                        .lineStyle(.init(lineWidth: 3, lineCap: .round, lineJoin: .round, dash: [4, 6]))
                     }
 
                     RuleMark(x: .value("Now", now))
